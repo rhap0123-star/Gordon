@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gordon — Online Voting System (Prototype)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">🗳️</div>
+      <div class="titles">
+        <h1>Gordon Voting System</h1>
+        <p class="subtitle">Secure-by-Design — Client-side Prototype</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Main sections">
+      <button class="tab active" role="tab" aria-selected="true" data-target="#admin">Admin</button>
+      <button class="tab" role="tab" aria-selected="false" data-target="#voter">Voter</button>
+      <button class="tab" role="tab" aria-selected="false" data-target="#results">Results</button>
+      <button class="tab" role="tab" aria-selected="false" data-target="#guide">Guide</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section id="admin" class="section active" aria-labelledby="Admin section">
+      <div class="grid two">
+        <div class="card">
+          <h2>Election details</h2>
+          <form id="election-form">
+            <label>
+              <span>Title</span>
+              <input type="text" id="election-title" required placeholder="e.g., Student Council 2025" />
+            </label>
+            <label>
+              <span>Description</span>
+              <textarea id="election-description" rows="3" placeholder="Short description"></textarea>
+            </label>
+            <div class="grid two">
+              <label>
+                <span>Start time</span>
+                <input type="datetime-local" id="election-start" />
+              </label>
+              <label>
+                <span>End time</span>
+                <input type="datetime-local" id="election-end" />
+              </label>
+            </div>
+            <div class="grid two">
+              <label class="checkbox">
+                <input type="checkbox" id="allow-live-results" />
+                <span>Show live results before end</span>
+              </label>
+              <label>
+                <span>Max choices</span>
+                <input type="number" id="max-choices" min="1" step="1" value="1" />
+              </label>
+            </div>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save election</button>
+              <button class="btn ghost" type="button" id="load-demo">Load demo data</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Candidates</h2>
+          <form id="candidate-form" class="inline">
+            <label>
+              <span>Name</span>
+              <input type="text" id="candidate-name" required placeholder="e.g., Alex Johnson" />
+            </label>
+            <label>
+              <span>Tagline</span>
+              <input type="text" id="candidate-tagline" placeholder="e.g., Transparency & Inclusion" />
+            </label>
+            <label>
+              <span>Accent color</span>
+              <input type="color" id="candidate-color" value="#6ea8fe" />
+            </label>
+            <div class="actions">
+              <button class="btn" type="submit">Add candidate</button>
+            </div>
+          </form>
+          <div id="candidate-list" class="candidate-list"></div>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h2>Voter access codes</h2>
+          <form id="codes-form" class="inline">
+            <label>
+              <span>How many codes?</span>
+              <input type="number" id="codes-count" min="1" step="1" value="10" />
+            </label>
+            <div class="actions">
+              <button class="btn" type="submit">Generate</button>
+              <button class="btn ghost" type="button" id="export-codes">Export CSV</button>
+              <button class="btn ghost" type="button" id="print-codes">Print</button>
+              <button class="btn danger ghost" type="button" id="clear-unused-codes">Clear unused</button>
+            </div>
+          </form>
+          <div id="codes-list" class="codes-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Data management</h2>
+          <div class="actions stack">
+            <button class="btn ghost" id="export-json">Export election JSON</button>
+            <label class="file">
+              <input type="file" id="import-json" accept="application/json" />
+              <span>Import election JSON</span>
+            </label>
+            <button class="btn danger" id="reset-all">Reset all data</button>
+          </div>
+          <p class="muted small">Data is stored locally in your browser for this prototype.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="voter" class="section" aria-labelledby="Voter section">
+      <div class="card">
+        <h2>Enter your access code</h2>
+        <form id="voter-login" class="inline">
+          <label>
+            <span>Access code</span>
+            <input type="text" id="voter-code" placeholder="e.g., X7Q9-2L" autocomplete="one-time-code" />
+          </label>
+          <div class="actions">
+            <button class="btn primary" type="submit">Continue</button>
+          </div>
+        </form>
+        <p class="muted small">Ask your election organizer for your unique access code.</p>
+      </div>
+
+      <div id="ballot" class="card hidden" aria-live="polite">
+        <h2>Ballot</h2>
+        <p id="ballot-context" class="muted"></p>
+        <div id="ballot-candidates" class="candidate-cards"></div>
+        <div class="actions">
+          <button class="btn" id="review-vote" disabled>Review selection</button>
+          <button class="btn danger ghost" id="cancel-vote">Cancel</button>
+        </div>
+      </div>
+
+      <div id="ballot-review" class="card hidden">
+        <h2>Review your vote</h2>
+        <div id="review-summary"></div>
+        <div class="actions">
+          <button class="btn primary" id="submit-vote">Submit vote</button>
+          <button class="btn ghost" id="edit-vote">Edit selection</button>
+        </div>
+      </div>
+
+      <div id="voted" class="card hidden">
+        <h2>Vote recorded</h2>
+        <p>Thank you. Your vote has been recorded.</p>
+        <p class="muted small">For privacy, your selection is not displayed after submission.</p>
+      </div>
+    </section>
+
+    <section id="results" class="section" aria-labelledby="Results section">
+      <div class="card">
+        <div class="flex between center">
+          <h2>Results</h2>
+          <button class="btn ghost" id="refresh-results">Refresh</button>
+        </div>
+        <p id="results-status" class="muted"></p>
+        <div id="results-container" class="results"></div>
+      </div>
+    </section>
+
+    <section id="guide" class="section" aria-labelledby="Guide section">
+      <div class="card">
+        <h2>How to use Gordon Voting System</h2>
+        <ol class="guide-steps">
+          <li><strong>Create the election</strong>: Go to Admin → fill title, dates, toggles → Save election.</li>
+          <li><strong>Add candidates</strong>: Admin → add candidate name and optional tagline → Add candidate.</li>
+          <li><strong>Generate voter codes</strong>: Admin → set quantity → Generate → print or export CSV.</li>
+          <li><strong>Share codes</strong>: Distribute one code per voter securely.</li>
+          <li><strong>Voters cast votes</strong>: Voter → enter code → select candidate → submit.</li>
+          <li><strong>View results</strong>: Results → refresh as needed. Live results depend on the setting.</li>
+          <li><strong>Backup/restore</strong>: Admin → export/import JSON.</li>
+        </ol>
+        <p class="muted small">This is a client-only prototype. For production, use a secure server, audited cryptography, and independent verification.</p>
+      </div>
+
+      <div class="card">
+        <h2>Quick tips</h2>
+        <ul class="bullets">
+          <li>Use <em>Load demo data</em> to try the system instantly.</li>
+          <li>Codes are single-use. If a code shows as used, it cannot vote again.</li>
+          <li>Importing JSON replaces the current election.</li>
+          <li>Reset clears all browser data for this prototype.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <div id="gordon-launch" class="gordon-launch" aria-label="Open Gordon assistant" title="Ask Gordon">
+    <span class="avatar">🤖</span>
+    <span class="label">Ask Gordon</span>
+  </div>
+
+  <aside id="gordon" class="gordon hidden" role="dialog" aria-modal="false" aria-label="Gordon assistant">
+    <header class="gordon-header">
+      <div class="avatar">🤖</div>
+      <div>
+        <div class="name">Gordon</div>
+        <div class="role">Your in-app guide</div>
+      </div>
+      <button id="gordon-close" class="icon-btn" aria-label="Close">✕</button>
+    </header>
+    <div id="gordon-messages" class="gordon-messages" aria-live="polite"></div>
+    <form id="gordon-form" class="gordon-input" autocomplete="off">
+      <input id="gordon-text" type="text" placeholder="Ask how to create an election, add candidates, generate codes…" />
+      <button class="btn primary" type="submit">Ask</button>
+    </form>
+  </aside>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <footer class="app-footer">
+    <div>© <span id="year"></span> Gordon Voting System — Prototype</div>
+    <div class="muted small">Theme: Midnight Indigo</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
